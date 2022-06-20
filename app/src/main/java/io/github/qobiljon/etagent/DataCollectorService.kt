@@ -22,7 +22,7 @@ import android.hardware.SensorEventListener
 class DataCollectorService : Service(), SensorEventListener {
     private lateinit var sensorManager: SensorManager
     private lateinit var files: MutableMap<Sensor, File>
-    private val samplingRate = SensorManager.SENSOR_DELAY_FASTEST
+    private val samplingRate = SensorManager.SENSOR_DELAY_UI
 
     override fun onCreate() {
         Log.e(MainActivity.TAG, "DataCollectorService.onCreate()")
