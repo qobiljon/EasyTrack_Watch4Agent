@@ -16,13 +16,19 @@ import android.hardware.SensorEvent
 import android.hardware.SensorManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.IntentFilter
 import android.hardware.SensorEventListener
+import android.os.BatteryManager
+import java.io.InterruptedIOException
+import java.util.*
 
 
 class DataCollectorService : Service(), SensorEventListener {
     private lateinit var sensorManager: SensorManager
     private lateinit var files: MutableMap<Sensor, File>
-    private val samplingRate = SensorManager.SENSOR_DELAY_UI
+    private lateinit var batteryFile: File
+    private lateinit var batteryLevelThread: Thread
+    private lateinit var samplingRates: Map<String, Int>
 
     override fun onCreate() {
         Log.e(MainActivity.TAG, "DataCollectorService.onCreate()")
@@ -31,16 +37,17 @@ class DataCollectorService : Service(), SensorEventListener {
         files = mutableMapOf()
         val allSensors = sensorManager.getSensorList(Sensor.TYPE_ALL)
         listOf<Any>(
-            Sensor.TYPE_ACCELEROMETER,
             Sensor.TYPE_PRESSURE,
+            "com.samsung.sensor.hr_raw",
+            Sensor.TYPE_ACCELEROMETER,
+            Sensor.TYPE_GYROSCOPE,
             Sensor.TYPE_MAGNETIC_FIELD,
-            Sensor.TYPE_GYROSCOPE
         ).forEach {
             when (it) {
                 is String -> allSensors.find { s -> s.stringType.equals(it) }
                 else -> sensorManager.getDefaultSensor(it as Int)
             }?.let { sensor ->
-                val file = File(filesDir, "${sensor.name}.csv")
+                val file = File(filesDir, "${sensor.stringType}.csv")
                 if (!file.exists()) {
                     file.createNewFile()
                     file.writeText("timestamp\tvalue\n")
@@ -48,6 +55,15 @@ class DataCollectorService : Service(), SensorEventListener {
                 files[sensor] = file
             }
         }
+
+        samplingRates = mapOf(
+            Sensor.STRING_TYPE_PRESSURE to SensorManager.SENSOR_DELAY_UI,
+            "com.samsung.sensor.hr_raw" to SensorManager.SENSOR_DELAY_UI,
+            Sensor.STRING_TYPE_ACCELEROMETER to SensorManager.SENSOR_DELAY_GAME,
+            Sensor.STRING_TYPE_GYROSCOPE to SensorManager.SENSOR_DELAY_GAME,
+            Sensor.STRING_TYPE_MAGNETIC_FIELD to SensorManager.SENSOR_DELAY_GAME,
+        )
+
 
         // region setup foreground service (notification)
         val notificationId = 98765
@@ -69,20 +85,59 @@ class DataCollectorService : Service(), SensorEventListener {
         startForeground(notificationId, notification)
         // endregion
 
+        batteryFile = File(filesDir, "batteryLevel.csv")
+        if (!batteryFile.exists()) {
+            batteryFile.createNewFile()
+            batteryFile.writeText("timestamp\tvalue\n")
+        }
+        batteryLevelThread = thread {
+            val batteryStatus = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { applicationContext.registerReceiver(null, it) }
+            try {
+                while (true) {
+                    val batteryPct: Float? = batteryStatus?.let { intent ->
+                        val level: Int = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                        val scale: Int = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                        level * 100 / scale.toFloat()
+                    }
+                    batteryPct?.let {
+                        Log.e(MainActivity.TAG, "battery level $it")
+                        batteryFile.appendText("${Calendar.getInstance().timeInMillis}\t$it\n")
+                    }
+                    Thread.sleep(1000)
+                }
+            } catch (e: InterruptedIOException) {
+                Log.e(MainActivity.TAG, "batteryLevelThread interrupted")
+            }
+        }
+
         super.onCreate()
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         Log.e(MainActivity.TAG, "DataCollectorService.onStartCommand()")
-        files.forEach { sensorManager.registerListener(this, it.key, samplingRate) }
+
+        files.forEach { sensor ->
+            samplingRates[sensor.key.stringType]?.let { samplingRate ->
+                sensorManager.registerListener(this, sensor.key, samplingRate)
+            }
+        }
         setUpDataSubmissionThread()
         setUpHeartbeatSubmissionThread()
+
+        if (!batteryLevelThread.isAlive)
+            batteryLevelThread.start()
+
         return START_STICKY
     }
 
     override fun onDestroy() {
         Log.e(MainActivity.TAG, "DataCollectorService.onDestroy()")
         sensorManager.unregisterListener(this)
+        if (batteryLevelThread.isAlive) try {
+            batteryLevelThread.interrupt()
+        } catch (e: SecurityException) {
+            e.printStackTrace()
+        }
         super.onDestroy()
     }
 
