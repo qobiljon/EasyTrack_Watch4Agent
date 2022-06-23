@@ -8,6 +8,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import io.github.qobiljon.etagent.databinding.ActivityMainBinding
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -19,8 +20,7 @@ class MainActivity : Activity() {
         const val TAG = "EasyTrackAgent"
     }
 
-    private lateinit var timeThread: Thread
-
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
