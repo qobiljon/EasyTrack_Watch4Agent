@@ -92,21 +92,21 @@ class DataCollectorService : Service(), SensorEventListener {
         }
         batteryLevelThread = thread {
             val batteryStatus = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { applicationContext.registerReceiver(null, it) }
-            try {
-                while (true) {
-                    val batteryPct: Float? = batteryStatus?.let { intent ->
-                        val level: Int = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                        val scale: Int = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-                        level * 100 / scale.toFloat()
-                    }
-                    batteryPct?.let {
-                        Log.e(MainActivity.TAG, "battery level $it")
-                        batteryFile.appendText("${Calendar.getInstance().timeInMillis}\t$it\n")
-                    }
-                    Thread.sleep(1000)
+            while (!Thread.currentThread().isInterrupted) {
+                val batteryPct: Float? = batteryStatus?.let { intent ->
+                    val level: Int = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                    val scale: Int = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                    level * 100 / scale.toFloat()
                 }
-            } catch (e: InterruptedIOException) {
-                Log.e(MainActivity.TAG, "batteryLevelThread interrupted")
+                batteryPct?.let {
+                    Log.e(MainActivity.TAG, "battery level $it")
+                    batteryFile.appendText("${Calendar.getInstance().timeInMillis}\t$it\n")
+                }
+                try {
+                    Thread.sleep(1000)
+                } catch (e: InterruptedIOException) {
+                    Log.e(MainActivity.TAG, "batteryLevelThread interrupted")
+                }
             }
         }
 
@@ -231,7 +231,7 @@ class DataCollectorService : Service(), SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent) {
-        val timestamp: Long = System.currentTimeMillis() + (event.timestamp - System.nanoTime()) / 1000000L
+        val timestamp: Long = Calendar.getInstance().timeInMillis
         val values: String = event.values.joinToString(",")
         files[event.sensor]?.appendText("$timestamp\t$values\n")
     }

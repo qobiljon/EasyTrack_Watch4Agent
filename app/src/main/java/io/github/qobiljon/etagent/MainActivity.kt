@@ -3,16 +3,15 @@ package io.github.qobiljon.etagent
 import android.view.View
 import android.os.Bundle
 import android.app.Activity
-import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import java.time.LocalDateTime
-import android.content.ServiceConnection
-import android.os.IBinder
-import android.util.Log
 import java.time.format.DateTimeFormatter
 import io.github.qobiljon.etagent.databinding.ActivityMainBinding
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.concurrent.thread
 
 
 class MainActivity : Activity() {
@@ -20,7 +19,7 @@ class MainActivity : Activity() {
         const val TAG = "EasyTrackAgent"
     }
 
-    private var svc: DataCollectorService? = null
+    private lateinit var timeThread: Thread
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,19 +43,16 @@ class MainActivity : Activity() {
             btnStop.visibility = View.GONE
             binding.root.background = getDrawable(R.drawable.orange_circle)
         }
-    }
 
-    override fun onStart() {
-        super.onStart()
-
-        val dateTime = DateTimeFormatter.ofPattern("EE MM.dd, KK:mm a").format(LocalDateTime.now()).split(", ")
-        tvDate.text = dateTime[0]
-        tvTime.text = dateTime[1]
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-
-        TODO("NOT IMPLEMENTED YET")
+        GlobalScope.launch {
+            while (true) {
+                runOnUiThread {
+                    val dateTime = DateTimeFormatter.ofPattern("EE MM.dd, KK:mm a").format(LocalDateTime.now()).split(", ")
+                    tvDate.text = dateTime[0]
+                    tvTime.text = dateTime[1]
+                }
+                delay(1000)
+            }
+        }
     }
 }

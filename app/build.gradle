@@ -38,5 +38,5 @@ dependencies {
     implementation 'androidx.health:health-services-client:1.0.0-alpha03'
 
     // concurrency
-    implementation 'com.google.guava:guava:29.0-android'
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.2"
 }
