@@ -17,7 +17,7 @@ class MainActivity : AppCompatActivity() {
         const val TAG = "EasyTrackAgent"
     }
 
-    private val viewModel: MainActivityViewModel by viewModels { LiveDataVMFactory }
+    private val viewModel: MainActivityViewModel by viewModels { MainActivityViewModel.LiveDataVMFactory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

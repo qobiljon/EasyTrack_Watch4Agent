@@ -27,11 +27,11 @@ class MainActivityViewModel : ViewModel() {
     fun getTime(): LiveData<Pair<String, String>> {
         return time
     }
-}
 
-object LiveDataVMFactory : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        @Suppress("UNCHECKED_CAST")
-        return MainActivityViewModel() as T
+    companion object LiveDataVMFactory : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return MainActivityViewModel() as T
+        }
     }
 }
