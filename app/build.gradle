@@ -1,7 +1,6 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'org.jetbrains.kotlin.android.extensions'
 }
 
 android {
@@ -21,6 +20,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
     buildFeatures {
         viewBinding true
     }
@@ -33,10 +33,12 @@ dependencies {
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
     implementation 'androidx.wear:wear:1.2.0'
+    implementation 'androidx.appcompat:appcompat:1.4.2'
 
-    // health data
-    implementation 'androidx.health:health-services-client:1.0.0-alpha03'
-
-    // concurrency
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.2"
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.0' // ViewModel
+    implementation 'androidx.activity:activity-ktx:1.5.0' // lifecycleScope
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.5.0' // LiveData
+    implementation 'androidx.health:health-services-client:1.0.0-alpha03' // HealthServices
+    implementation 'androidx.concurrent:concurrent-futures-ktx:1.1.0' // ListenableFuture
+    implementation 'com.google.guava:guava:29.0-androidx' // async-await
 }

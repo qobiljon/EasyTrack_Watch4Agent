@@ -2,24 +2,23 @@ package io.github.qobiljon.etagent
 
 import android.view.View
 import android.os.Bundle
-import android.app.Activity
-import android.content.Intent
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
+import androidx.concurrent.futures.await
+import androidx.health.services.client.HealthServices
+import androidx.health.services.client.data.DataType
 import io.github.qobiljon.etagent.databinding.ActivityMainBinding
-import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 
 
-class MainActivity : Activity() {
+class MainActivity : AppCompatActivity() {
     companion object {
         const val TAG = "EasyTrackAgent"
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
+    private val viewModel: MainActivityViewModel by viewModels { LiveDataVMFactory }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -28,30 +27,34 @@ class MainActivity : Activity() {
         setContentView(binding.root)
 
         // onclick
-        btnStart.setOnClickListener {
-            startForegroundService(Intent(applicationContext, DataCollectorService::class.java))
+        binding.btnStart.setOnClickListener {
+            viewModel.startDataCollection(applicationContext)
 
-            btnStart.visibility = View.GONE
-            btnStop.visibility = View.VISIBLE
-            binding.root.background = getDrawable(R.drawable.green_circle)
+            binding.btnStart.visibility = View.GONE
+            binding.btnStop.visibility = View.VISIBLE
+            binding.root.setBackgroundResource(R.drawable.green_circle)
         }
-        btnStop.setOnClickListener {
-            stopService(Intent(applicationContext, DataCollectorService::class.java))
+        binding.btnStop.setOnClickListener {
+            viewModel.stopDataCollection(applicationContext)
 
-            btnStart.visibility = View.VISIBLE
-            btnStop.visibility = View.GONE
-            binding.root.background = getDrawable(R.drawable.orange_circle)
+            binding.btnStart.visibility = View.VISIBLE
+            binding.btnStop.visibility = View.GONE
+            binding.root.setBackgroundResource(R.drawable.orange_circle)
         }
 
-        GlobalScope.launch {
-            while (true) {
-                runOnUiThread {
-                    val dateTime = DateTimeFormatter.ofPattern("EE MM.dd, KK:mm a").format(LocalDateTime.now()).split(", ")
-                    tvDate.text = dateTime[0]
-                    tvTime.text = dateTime[1]
-                }
-                delay(1000)
-            }
+        // livedata
+        viewModel.getTime().observe(this) {
+            binding.tvDate.text = it.first
+            binding.tvTime.text = it.second
+        }
+
+        // hrm
+        val healthClient = HealthServices.getClient(applicationContext)
+        val measureClient = healthClient.measureClient
+        lifecycleScope.launch {
+            val capabilities = measureClient.capabilities.await()
+            val supportsHeartRate = DataType.HEART_RATE_BPM in capabilities.supportedDataTypesMeasure
+            print(supportsHeartRate)
         }
     }
 }
